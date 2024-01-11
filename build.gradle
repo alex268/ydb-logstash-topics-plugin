@@ -1,135 +1,123 @@
-import java.nio.file.Files
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING
+description = 'YDB LogStash plugins'
 
-apply plugin: 'java'
-apply from: LOGSTASH_CORE_PATH + "/../rubyUtils.gradle"
-
-// ===========================================================================
-// plugin info
-// ===========================================================================
-group                      'org.logstashplugins' // must match the package of the main plugin class
-version                    = "1.0.2"
-description                = "Example Java output implementation"
-pluginInfo.licenses        = ['Apache-2.0'] // list of SPDX license IDs
-pluginInfo.longDescription = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using \$LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
-pluginInfo.authors         = ['Elasticsearch']
-pluginInfo.email           = ['info@elastic.co']
-pluginInfo.homepage        = "http://www.elastic.co/guide/en/logstash/current/index.html"
-// ===========================================================================
-
-sourceCompatibility = 1.9
-targetCompatibility = 1.9
+allprojects {
+    println "apply allprojects ${name} in ${projectDir}"
+    group = 'org.logstashplugins'
+    version = '1.0.2'
+}
 
 buildscript {
+    println "apply buildscript ${name} in ${projectDir}"
+
     repositories {
         mavenCentral()
         jcenter()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
     }
 
     dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:4.0.4'
+        classpath "gradle.plugin.com.github.johnrengelman:shadow:7.1.2"
     }
 }
 
-repositories {
-    mavenCentral()
-}
+subprojects {
+    println "apply subproject ${name} in ${projectDir}"
 
-apply plugin: 'com.github.johnrengelman.shadow'
+    apply plugin: 'java'
+    apply from: LOGSTASH_CORE_PATH + '/../rubyUtils.gradle'
+    apply plugin: 'com.github.johnrengelman.shadow'
 
-shadowJar {
-    archiveClassifier = null
-}
+    // ===========================================================================
+    // plugin info
+    // ===========================================================================
+    pluginInfo.licenses        = ['Apache-2.0'] // list of SPDX license IDs
+    pluginInfo.longDescription = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using \$LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
+    pluginInfo.authors         = ['Elasticsearch']
+    pluginInfo.email           = ['info@elastic.co']
+    pluginInfo.homepage        = "http://www.elastic.co/guide/en/logstash/current/index.html"
+    // ===========================================================================
 
-dependencies {
+    sourceCompatibility = 1.9
+    targetCompatibility = 1.9
 
-    implementation 'tech.ydb:ydb-sdk-topic:2.1.7'
-    implementation 'tech.ydb.auth:yc-auth-provider:2.1.0'
-
-    implementation 'org.apache.commons:commons-lang3:3.7'
-    compileOnly 'org.apache.logging.log4j:log4j-api:2.17.0'
-    compileOnly 'org.apache.logging.log4j:log4j-core:2.17.0'
-
-    implementation 'org.apache.logging.log4j:log4j-api:2.17.0'
-    implementation fileTree(dir: LOGSTASH_CORE_PATH, include: "**/logstash-core.jar")
-
-    testImplementation 'junit:junit:4.12'
-    testImplementation 'org.jruby:jruby-complete:9.1.13.0'
-    testImplementation 'org.apache.logging.log4j:log4j-core:2.9.1'
-    testImplementation 'org.mockito:mockito-core:3.12.4'
-}
-
-clean {
-    delete "${projectDir}/Gemfile"
-    delete "${projectDir}/" + pluginInfo.pluginFullName() + ".gemspec"
-    delete "${projectDir}/lib/"
-    delete "${projectDir}/vendor/"
-    new FileNameFinder().getFileNames(projectDir.toString(), pluginInfo.pluginFullName() + "-?.?.?.gem").each { filename ->
-        delete filename
+    repositories {
+        mavenCentral()
     }
-}
 
-tasks.withType(JavaCompile) {
-    options.encoding = 'UTF-8'
-}
-
-tasks.register("vendor"){
-    dependsOn shadowJar
-    doLast {
-        String vendorPathPrefix = "vendor/jar-dependencies"
-        String projectGroupPath = project.group.replaceAll('\\.', '/')
-        File projectJarFile = file("${vendorPathPrefix}/${projectGroupPath}/${pluginInfo.pluginFullName()}/${project.version}/${pluginInfo.pluginFullName()}-${project.version}.jar")
-        projectJarFile.mkdirs()
-        Files.copy(file("$buildDir/libs/${project.name}-${project.version}.jar").toPath(), projectJarFile.toPath(), REPLACE_EXISTING)
-        validatePluginJar(projectJarFile, project.group)
+    shadowJar {
+        archiveClassifier = null
     }
-}
 
-tasks.register("generateRubySupportFiles") {
-    doLast {
-        generateRubySupportFilesForPlugin(project.description, project.group, version)
+    dependencies {
+        implementation 'tech.ydb:ydb-sdk-topic:2.1.7'
+        implementation 'tech.ydb.auth:yc-auth-provider:2.1.0'
+
+        implementation 'org.apache.commons:commons-lang3:3.7'
+        compileOnly 'org.apache.logging.log4j:log4j-api:2.17.0'
+        compileOnly 'org.apache.logging.log4j:log4j-core:2.17.0'
+
+        implementation 'org.apache.logging.log4j:log4j-api:2.17.0'
+        implementation fileTree(dir: LOGSTASH_CORE_PATH, include: "**/logstash-core.jar")
+
+        testImplementation 'junit:junit:4.12'
+        testImplementation 'org.jruby:jruby-complete:9.1.13.0'
+        testImplementation 'org.apache.logging.log4j:log4j-core:2.9.1'
+        testImplementation 'org.mockito:mockito-core:3.12.4'
     }
-}
 
-tasks.register("removeObsoleteJars") {
-    doLast {
-        new FileNameFinder().getFileNames(
-                projectDir.toString(),
-                "vendor/**/" + pluginInfo.pluginFullName() + "*.jar",
-                "vendor/**/" + pluginInfo.pluginFullName() + "-" + version + ".jar").each { f ->
-            delete f
+    clean {
+        delete "${projectDir}/Gemfile"
+        delete "${projectDir}/" + pluginInfo.pluginFullName() + ".gemspec"
+        delete "${projectDir}/lib/"
+        delete "${projectDir}/vendor/"
+        new FileNameFinder().getFileNames(projectDir.toString(), pluginInfo.pluginFullName() + "-?.?.?.gem").each { filename ->
+            delete filename
+        }
+    }
+
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+    }
+
+    tasks.register("vendor"){
+        dependsOn shadowJar
+        doLast {
+            String vendorPathPrefix = "vendor/jar-dependencies"
+            String projectGroupPath = project.group.replaceAll('\\.', '/')
+            File projectJarFile = file("${vendorPathPrefix}/${projectGroupPath}/${pluginInfo.pluginFullName()}/${project.version}/${pluginInfo.pluginFullName()}-${project.version}.jar")
+            projectJarFile.mkdirs()
+            java.nio.file.Files.copy(
+                file("$buildDir/libs/${project.name}-${project.version}.jar").toPath(),
+                projectJarFile.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING
+            )
+            validatePluginJar(projectJarFile, project.group)
+        }
+    }
+
+    tasks.register("generateRubySupportFiles") {
+        doLast {
+            generateRubySupportFilesForPlugin(project.description, project.group, version)
+        }
+    }
+
+    tasks.register("removeObsoleteJars") {
+        doLast {
+            new FileNameFinder().getFileNames(
+                    projectDir.toString(),
+                    "vendor/**/" + pluginInfo.pluginFullName() + "*.jar",
+                    "vendor/**/" + pluginInfo.pluginFullName() + "-" + version + ".jar").each { f ->
+                delete f
+            }
+        }
+    }
+
+    tasks.register("gem") {
+        dependsOn = [downloadAndInstallJRuby, removeObsoleteJars, vendor, generateRubySupportFiles]
+        doLast {
+            buildGem(projectDir, buildDir, pluginInfo.pluginFullName() + ".gemspec")
         }
     }
 }
-
-def pluginType = project.findProperty('pluginType') ?: 'input'
-def pluginClass = project.findProperty('pluginClass') ?: 'YdbTopicsInput'
-def pluginName = project.findProperty('pluginName') ?: 'ydb_topics_input'
-
-if (pluginType == 'output') {
-    pluginClass = 'YdbTopicsOutput'
-    pluginName = 'ydb_topics_output'
-}
-
-pluginInfo.pluginType = pluginType
-pluginInfo.pluginClass = pluginClass
-pluginInfo.pluginName = pluginName
-
-tasks.register("gemInput") {
-    dependsOn = [downloadAndInstallJRuby, removeObsoleteJars, vendor, generateRubySupportFiles]
-    doLast {
-        buildGem(projectDir, buildDir, pluginInfo.pluginFullName() + ".gemspec")
-    }
-}
-//команда для запуска
-//gradlew gemInput -PpluginType=input -PpluginClass=YdbTopicsInput -PpluginName=ydb_topics_input
-
-tasks.register("gemOutput") {
-    dependsOn = [downloadAndInstallJRuby, removeObsoleteJars, vendor, generateRubySupportFiles]
-    doLast {
-        buildGem(projectDir, buildDir, pluginInfo.pluginFullName() + ".gemspec")
-    }
-}
-
-//команда для запуска
-// gradlew gemOutput -PpluginType=output -PpluginClass=YdbTopicsOutput -PpluginName=ydb_topics_output
